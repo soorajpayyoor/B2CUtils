@@ -288,7 +288,59 @@ param(
 
 }
 
+<# 
+ .Synopsis
+  Deletes a B2C Policy.
+
+ .Description
+  Removes a Trust Framework Policy from B2C.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter PolicyId
+  Specify the name of the Policy to remove.
+  
+  .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+
+ .Example
+   # Remove a Policy.
+   Remove-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
 function Remove-B2CPolicy {
+param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$PolicyId,
+	[switch]$ForeAuthn
+    )
+
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	try{
+		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework/?api-version=1&TenantId=$TenantId&PolicyId=$PolicyId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
+	} 
+	catch {
+			#Report Returned Error to The User
+			$result = $_.Exception.Response.GetResponseStream()
+			$reader = New-Object System.IO.StreamReader($result)
+			$reader.BaseStream.Position = 0
+			$reader.DiscardBufferedData()
+			$responseBody = $reader.ReadToEnd();
+			Write-Error ([xml]$responseBody).Error.ExceptionMessage
+	}
+
+	
+}
+
+
+function Get-B2CCertificate {
 
 }
 
@@ -297,10 +349,6 @@ function Remove-B2CCertificate {
 }
 
 function New-B2CCertificate {
-
-}
-
-function Get-B2CCertificate {
 
 }
 
