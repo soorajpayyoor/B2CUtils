@@ -4,7 +4,11 @@ B2C Functions
 Written by Phil Whipps
 UNIFY Solutions
 
+
+For more info see: https://github.com/WhippsP/B2CUtils
 #>
+
+#region Module Functions
 function Get-TenantAccessToken
 {
 param(
@@ -47,8 +51,17 @@ param(
 
 }
 
+function GetB2CError()
+{
+			$result = $_.Exception.Response.GetResponseStream()
+			$reader = New-Object System.IO.StreamReader($result)
+			$reader.BaseStream.Position = 0
+			$reader.DiscardBufferedData()
+			$responseBody = $reader.ReadToEnd();
+			Write-Error ([xml]$responseBody).Error.ExceptionMessage
+}
 
-
+#endregion
 
 <# 
  .Synopsis
@@ -82,6 +95,9 @@ param(
 }
 
 
+#region List Functions
+
+
 <# 
  .Synopsis
   Displays a list of B2C Certificates.
@@ -97,32 +113,82 @@ param(
   
 
  .Example
-   # Get a list of Policies.
-   Get-B2CCertList -TenantId "myb2ctenant.onmicrosoft.com"
+   # Get a list of Certificates.
+   Get-B2CCertificateList -TenantId "myb2ctenant.onmicrosoft.com"
 
  .Example
-    #  Get a list of Policies, after you re-authenticate..
-   Get-B2CCertList -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn
+    #  Get a list of Certificates, after you re-authenticate..
+   Get-B2CCertificateList -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn
 
  .LINK
 	https://github.com/WhippsP/B2CUtils
    
 #>
-function Get-B2CCertList {
+function Get-B2CCertificateList {
 param(
    [Parameter(Mandatory=$true)]
     [string]$TenantId,
-	[switch]$ForeAuthn
+	[parameter(DontShow)]
+	[string]$KeyType="cert",
+	[switch]$ForeAuthn,
+	[switch]$raw
     )
 
 $accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
 
+try{
+$KeyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keylist?api-version=1&TenantId=$TenantId&KeyType=$KeyType" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+}
+Catch
+{
+	GetB2CError
+}
+if($raw)
+{
+	$KeyList.content
+}
+else{
+	([xml]$KeyList.content).ArrayOfstring.string
+}
 
-$KeyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keylist?api-version=1&TenantId=$TenantId&KeyType=cert" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+}
 
+<# 
+ .Synopsis
+  Displays a list of B2C Key Containers.
 
-([xml]$KeyList.content).ArrayOfstring.string
+ .Description
+  Displays a list of B2C Key Containers used within Trust Framework Policies.
 
+ .Parameter TenantId
+  The name of the B2C Tenant.
+
+ .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+
+ .Example
+   # Get a list of Key Containers.
+   Get-B2CKeyContainerList -TenantId "myb2ctenant.onmicrosoft.com"
+
+ .Example
+    #  Get a list of Key Containers., after you re-authenticate..
+   Get-B2CKeyContainerList -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function Get-B2CKeyContainerList {
+param(
+   [Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[switch]$ForeAuthn,
+	[switch]$raw
+    )
+
+	Get-B2CCertificateList -TenantId $TenantId -ForeAuthn:$ForeAuthn -raw:$raw -KeyType KeyContainer
+   
 }
 
 
@@ -159,16 +225,25 @@ param(
 	[switch]$ForeAuthn
     )
 
-$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	try {
+		$PolicyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/policyList?tenantId=$TenantId" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+	}
+	Catch
+	{
+		GetB2CError
+	}
 
-$PolicyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/policyList?tenantId=$TenantId" -Method Get -Headers @{Authorization="Bearer $accessToken"}
-
-
-([xml]$PolicyList.content).ArrayOfPolicy.Policy.POlicyID
+	([xml]$PolicyList.content).ArrayOfPolicy.Policy.POlicyID
 
 
 }
 
+#TODO: Get-B2CUserList
+
+#endregion
+
+#region Get Functions
 <# 
  .Synopsis
   Gets a B2C Policy.
@@ -190,16 +265,16 @@ $PolicyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/policyL
   
 
  .Example
-   # Get a list of Policies.
+   # Get a Policy from B2C.
    Get-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1
 
  .Example
-    #  Get a list of Policies, after you re-authenticate..
+    #  Get a Policy and associated base Policies from B2C.
    Get-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1 -GetBasePolicies
    
    .Example
-    #  Get a list of Policies, after you re-authenticate..
-   Get-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn -PolicyId B2C_1A_Policy1
+    #  Get a Policy, after you re-authenticate..
+   Get-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1 -ForeAuthn 
 
  .LINK
 	https://github.com/WhippsP/B2CUtils
@@ -217,10 +292,156 @@ param(
 
 	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
 
-$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework/GetAsXml?api-version=1&TenantId=$TenantId&PolicyId=$PolicyId&SendAsAttachment=false&GetBasePolicies=$GetBasePolicies" -Method Get -Headers @{Authorization="Bearer $accessToken"}
-([xml]$pol.content)
+	$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework/GetAsXml?api-version=1&TenantId=$TenantId&PolicyId=$PolicyId&SendAsAttachment=false&GetBasePolicies=$GetBasePolicies" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+
+	
+	([xml]$pol.content)
 }
 
+<# 
+ .Synopsis
+  Gets a B2C Certificate.
+
+ .Description
+  Retrieves a Certificate from B2C.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter CertificateId
+  Specify the name of the Certificate to return. (Can not be used with AllCerts)
+   
+  .Parameter AllCerts
+  Retrieve all associated Certificates within B2C. (Can not be used with CertificateId)
+
+ .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+ .Example
+   # Get a Certificate.
+   Get-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -CertificateId MySAMLSigningCert
+
+ .Example
+    #  Get a Certificate, after you re-authenticate..
+   Get-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -CertificateId MySAMLSigningCert  -ForceAuthn
+   
+   .Example
+    #  Get all Certificates within B2C
+   Get-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -AllCerts
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function Get-B2CCertificate {
+	[CmdletBinding(DefaultParameterSetName="Cert")] 
+	param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[parameter(Mandatory=$true,ParameterSetName = "Cert")]
+	[string]$CertificateId,
+	[parameter(Mandatory=$true,ParameterSetName = "AllCerts")]
+	[switch]$AllCerts,
+	[switch]$ForeAuthn
+    )
+	
+	
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+
+	$CrtArray = @()
+	
+	Try{
+		$enc = [system.Text.Encoding]::ASCII
+		if(!$AllCerts)
+		{
+			$CertEndpoint = "&CertificateId=$CertificateId";
+		}
+		$Crts = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/certificate?api-version=1&TenantId=$TenantId$CertEndpoint" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+
+		
+		foreach ($crt in ([xml]$Crts.content).ArrayOfCertificateInfo.CertificateInfo)
+		{
+		
+			$X509Cert = $null
+			$X509Cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2
+			$X509Cert.Import($enc.GetBytes($crt.X509Certificate2.RawData.InnerText))
+			$CrtArray += $X509Cert
+		}
+		
+	}
+	Catch [System.Net.WebException]
+	{
+		GetB2CError
+	}
+	
+	
+	if($CrtArray.length -eq 1)
+	{
+		$CrtArray[0]
+	}
+	else
+	{
+		$CrtArray
+	}
+	
+}
+
+<# 
+ .Synopsis
+  Gets a B2C Key Container.
+
+ .Description
+  Retrieves a Key Container from B2C.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter KeyContainerId
+  Specify the name of the Key Container to return. (Can not be used with AllCerts)
+   
+ .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+ .Example
+   # Get a Key Container.
+   Get-B2CKeyContainer -TenantId "myb2ctenant.onmicrosoft.com" -KeyContainerId MySAMLSigningCert
+
+ .Example
+    #  Get a Key Container, after you re-authenticate..
+   Get-B2CKeyContainer -TenantId "myb2ctenant.onmicrosoft.com" -KeyContainerId MySAMLSigningCert  -ForceAuthn
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function Get-B2CKeyContainer {
+	param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$KeyContainerId,
+	[switch]$ForeAuthn
+    )
+	
+	
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+
+	Try{
+		$KeyContainer = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keycontainer?api-version=1&TenantId=$TenantId&StorageReferenceId=$KeyContainerId" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+	}
+	Catch
+	{
+		GetB2CError
+	}
+	([xml]$KeyContainer.content)
+}
+
+
+#TODO: Get-B2CUser
+
+#endregion
+
+#region New Functions
 
 <# 
  .Synopsis
@@ -245,18 +466,18 @@ $pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework
  .Example
    # Upload a Policies.
    $policy = Get-Content -raw "C:\Temp\B2CPolicy.xml"
-   Set-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -Policy $policy
+   New-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -Policy $policy
 
  .Example
    # Upload a Policies with .
    $policy = Get-Content -raw "C:\Temp\B2CPolicy.xml" 
-   Set-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -Policy $policy -OverwriePolicy $False
+   New-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -Policy $policy -OverwriePolicy $False
    
  .LINK
 	https://github.com/WhippsP/B2CUtils
    
 #>
-function Set-B2CPolicy {
+function New-B2CPolicy {
 param(
 	[Parameter(Mandatory=$true)]
     [string]$TenantId,
@@ -276,17 +497,134 @@ param(
 	try{
 		$webAppResponse = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/trustframework?tenantId=$TenantId&OverwriteIfExists=$OverwriePolicy" -Method Post -Headers @{Authorization="Bearer $accessToken"} -ContentType "application/xml" -Body $PostStr
 	}
-	catch {
-			#Report Returned Error to The User
-			$result = $_.Exception.Response.GetResponseStream()
-			$reader = New-Object System.IO.StreamReader($result)
-			$reader.BaseStream.Position = 0
-			$reader.DiscardBufferedData()
-			$responseBody = $reader.ReadToEnd();
-			Write-Error ([xml]$responseBody).Error.ExceptionMessage
+	Catch
+	{
+		GetB2CError
 	}
 
 }
+
+<# 
+ .Synopsis
+  Upload a Key Container to B2C
+
+ .Description
+  This function uploads a B2C Policy.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter KeyContainerId
+  Specify the KeyContainerId.
+  
+  .Parameter UnencodedString
+  Specifies the string to Store
+  
+  .Parameter keyId
+  
+  .Parameter SecretType
+  
+  .Parameter Expiration
+  
+  .Parameter DeltaNotBefore
+  
+  .Parameter keySize
+    
+  .Parameter OverwriteIfExists
+  If the Key Container exists setting this switch will overwrite it.
+  
+ .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+ .Example
+   # Set a Key Container.
+   New-B2CKeyContainer -TenantId "myb2ctenant.onmicrosoft.com" -KeyContainerId NewKeyContainer -UnencodedString "String to Store"
+
+ .Example
+   # Set a Key Container forceing Authentication first.
+   New-B2CKeyContainer -TenantId "myb2ctenant.onmicrosoft.com" -KeyContainerId NewKeyContainer -UnencodedString "String to Store" -ForceAuthn
+   
+   .Example
+   # Create an RSA Key Container.
+   New-B2CKeyContainer -KeyContainerId mysigncert -keyId mycigncert -SecretType rsa -Expiration 0 -DeltaNotBefore 0 -keySize 2048
+
+   .Example
+   #Create an RSA Key Container. forceing Authentication first.
+   New-B2CKeyContainer -KeyContainerId mysigncert -keyId mycigncert -SecretType rsa -Expiration 0 -DeltaNotBefore 0 -keySize 2048 -ForceAuthn
+   
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function New-B2CKeyContainer {
+	[CmdletBinding(DefaultParameterSetName="StringKey")] 
+	param(
+	[parameter(Mandatory=$true,ParameterSetName = "StringKey")]
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+    [string]$TenantId,
+	[parameter(Mandatory=$true,ParameterSetName = "StringKey")]
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+	[string]$KeyContainerId,
+	[parameter(Mandatory=$true,ParameterSetName = "StringKey")]
+	[string]$UnencodedString,
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+	[string]$keyId,
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+	[ValidateSet("rsa", "oct")]
+	[string]$SecretType,
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+	[long]$Expiration,
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+	[long]$DeltaNotBefore,
+	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
+	[string]$keySize,
+	[parameter(Mandatory=$false,ParameterSetName = "StringKey")]
+	[parameter(Mandatory=$false,ParameterSetName = "KeyContainer")]	
+	[switch] $OverwriteIfExists
+    )
+
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $False
+	
+	
+	switch ($PsCmdlet.ParameterSetName) {
+    "KeyContainer" {
+		$PostData = "<string xmlns=`"http://schemas.microsoft.com/2003/10/Serialization/`">$SecretType</string>"
+		
+
+		try{
+			$webAppResponse = Invoke-WebRequest "https://cpim.windows.net/api/keycontainer?tenantId=$TenantId&storageReferenceId=$KeyContainerId&keyId=$keyId&SecretType=$SecretType&Expiration=$Expiration&DeltaNotBefore=$DeltaNotBefore&keySize=$keySize&overwriteIfExists=$OverwriteIfExists" -ContentType "application/xml; charset=utf-8" -Method Post -Headers @{Authorization="Bearer $accessToken";"referer"="https://cpim/"} -Body $PostData
+		}
+		Catch
+		{
+			GetB2CError
+		}
+	
+    }
+    "StringKey" {
+		$enc = [system.Text.Encoding]::ASCII
+
+		$Bytes = $enc.GetBytes($UnencodedString)
+		$b64str = [Convert]::ToBase64String($Bytes)
+		
+		
+		$KeyContainer = "{`"keys`":[{`"kid`":`"$KeyContainerId`",`"use`":`"sig`",`"kty`":`"oct`",`"k`":`"$b64str`"}]}"
+		$KBytes = $enc.GetBytes($KeyContainer)
+		$PostData = "<KeyContainerInfo xmlns:i=`"http://www.w3.org/2001/XMLSchema-instance`" z:Id=`"i1`" xmlns:z=`"http://schemas.microsoft.com/2003/10/Serialization/`" xmlns=`"http://schemas.datacontract.org/2004/07/Microsoft.Cpim.Protocols.Keys`"><StorageKeyId>$KeyContainerId</StorageKeyId><TenantId>$TenantId</TenantId><KeyContainer>" + [Convert]::ToBase64String($KBytes) + "</KeyContainer></KeyContainerInfo>"
+
+		try{
+			$webAppResponse = Invoke-WebRequest "https://cpim.windows.net/api/keycontainer?tenantId=$TenantId&overwriteIfExists=$OverwriteIfExists" -ContentType "application/xml; charset=utf-8" -Method Post -Headers @{Authorization="Bearer $accessToken";"referer"="https://cpim/"} -Body $PostData
+		}
+		Catch
+		{
+			GetB2CError
+		}
+    }
+}
+	
+
+
+}
+
 
 <# 
  .Synopsis
@@ -326,48 +664,223 @@ param(
 	try{
 		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework/?api-version=1&TenantId=$TenantId&PolicyId=$PolicyId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
 	} 
-	catch {
-			#Report Returned Error to The User
-			$result = $_.Exception.Response.GetResponseStream()
-			$reader = New-Object System.IO.StreamReader($result)
-			$reader.BaseStream.Position = 0
-			$reader.DiscardBufferedData()
-			$responseBody = $reader.ReadToEnd();
-			Write-Error ([xml]$responseBody).Error.ExceptionMessage
+	Catch
+	{
+		GetB2CError
 	}
 
 	
 }
 
+<# 
+ .Synopsis
+  Deletes a B2C Certificate.
 
-function Get-B2CCertificate {
+ .Description
+  Removes a Certificate from B2C.
 
-}
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter CertificateId
+  Specify the name of the Certificate to remove.
+  
+  .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
 
+ .Example
+   # Remove a Certificate.
+   Remove-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -CertificateId MySAMLCert
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
 function Remove-B2CCertificate {
+param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$CertificateId,
+	[switch]$ForeAuthn
+    )
 
+
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	try{
+		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/certificate/?api-version=1&TenantId=$TenantId&CertificateId=$CertificateId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
+	} 
+	Catch
+	{
+		GetB2CError
+	}
 }
 
-function New-B2CCertificate {
+<# 
+ .Synopsis
+  Deletes a B2C Key COntainer.
 
-}
+ .Description
+  Removes a Key COntainer from B2C.
 
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter KeyContainerId
+  Specify the name of the Key COntainer to remove.
+  
+  .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+
+ .Example
+   # Remove a Key COntainer.
+   Remove-B2CKeyContainer -TenantId "myb2ctenant.onmicrosoft.com" -KeyContainerId MyKeyContainer
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
 function Remove-B2CKeyContainer {
+	param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$KeyContainerId,
+	[switch]$ForeAuthn
+    )
 
+
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	try{
+		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keycontainer?api-version=1&TenantId=$TenantId&StorageReferenceId=$KeyContainerId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
+	} 
+	Catch
+	{
+		GetB2CError
+	}
 }
 
-function New-B2CKeyContainer {
+#TODO: Remove-B2CUser
 
+
+#endregion
+<# 
+ .Synopsis
+  Upload a Certificate to B2C
+
+ .Description
+  This function uploads a B2C Certificate.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter CertificateId
+  Specify the CertificateId.
+  
+  .Parameter CertificateFile
+  Specifies the path to a Certifficate File to store
+  
+  .Parameter Password
+  Specifies the Password used to read a private key.
+  
+  .Parameter NewSelfSignedCert
+  Use this switch to generate a self signed certificate to store.
+  
+  .Parameter NewCertSubject
+  Specifies subject if using the NewSelfSignedCert switch.
+  
+ .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+ .Example
+   # New Certificate from File.
+   New-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -CertificateId NewCert -CertificateFile "C:\temp\mycert.pfx" -Password "secret"
+
+ .Example
+   # New Certificate from Certificate.
+   New-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -CertificateId NewCert -Certificate $MyCert
+   
+   .Example
+   # New Self Signed Certificate.
+   New-B2CCertificate -TenantId "myb2ctenant.onmicrosoft.com" -CertificateId NewCert -NewSelfSignedCert NewCertSubject "cn=idp_signing_cert.mycompany.com"
+
+   
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function New-B2CCertificate {
+	[CmdletBinding(DefaultParameterSetName="AddCertFile")] 
+	param(
+	[Parameter(Mandatory=$true,ParameterSetName = "AddCert")]
+	[parameter(Mandatory=$true,ParameterSetName = "AddCertFile")]
+	[parameter(Mandatory=$true,ParameterSetName = "AddSelfCert")]	
+    [string]$TenantId,
+	[Parameter(Mandatory=$true,ParameterSetName = "AddCert")]
+	[parameter(Mandatory=$true,ParameterSetName = "AddCertFile")]
+	[parameter(Mandatory=$true,ParameterSetName = "AddSelfCert")]
+	[string]$CertificateId,
+	[parameter(Mandatory=$true,ParameterSetName = "AddCert")]
+	[System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+	[parameter(Mandatory=$true,ParameterSetName = "AddCertFile")]
+	[string]$CertificateFile,
+	[parameter(Mandatory=$false,ParameterSetName = "AddCert")]
+	[parameter(Mandatory=$false,ParameterSetName = "AddCertFile")]
+	[string]$Password,
+	[parameter(Mandatory=$true,ParameterSetName = "AddSelfCert")]
+	[string]$NewCertSubject,
+	[parameter(Mandatory=$false,ParameterSetName = "AddSelfCert")]
+	[switch]$NewSelfSignedCert,
+	[switch]$ForeAuthn
+	)
+	
+	if(($NewCertSubject.Length -gt 0) -and ( !$NewSelfSignedCert)) 
+	{
+		write-warning  "If you supply a Subject for a new Self-Signed cert you must add the -NewSelfSignedCert switch."
+		break
+	}
+	
+	If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+	{
+		write-warning "You do not have Administrator rights to generate a Certificate!`nPlease re-run this script as an Administrator!`n`n"
+		break;
+	}
+	
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $False
+	
+	if($NewSelfSignedCert)
+	{
+		$Certificate = New-SelfsignedCertificate -Subject "$NewCertSubject" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1") -KeyUsage KeyEncipherment, DigitalSignature  -CertStoreLocation "cert:\LocalMachine\My" -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -KeyLength 2048 -KeyAlgorithm RSA -KeyExportPolicy Exportable -HashAlgorithm SHA256 -NotAfter (Get-Date).Add(730d)
+	}
+	elseif($CertificateFile -ne "")
+	{
+		$Certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertificateFile,$Password,[System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
+	}
+	elseif($Certificate -ne $null)
+	{
+		
+	}
+	
+	$CBytes = $Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx)
+	$Postdata = "<base64Binary xmlns=`"http://schemas.microsoft.com/2003/10/Serialization/`">"+ [Convert]::ToBase64String($CBytes) +"</base64Binary>"
+	
+	try{
+		$webAppResponse = Invoke-WebRequest "https://cpim.windows.net/api/certificate?tenantId=$TenantId&certificateid=$CertificateId" -ContentType "application/xml; charset=utf-8" -Method Post -Headers @{Authorization="Bearer $accessToken";"referer"="https://cpim/"} -Body $PostData
+	}
+	Catch
+	{
+		GetB2CError
+	}
+	
+	
 }
 
-function Set-B2CKeyContainer {
 
-}
+#TODO: New-B2CUser
 
-function Get-B2CKeyContainer {
-
-}
-
+#endregoin
 
 
 export-modulemember -Function *-B2C*
