@@ -24,7 +24,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get-B2CPolicyList
 
 ```powershell
-		Get-B2CPolicyList  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Get-B2CPolicyList [-TenantId] <String> [-ForeAuthn] [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -53,7 +53,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;New-B2CPolicy
 
 ```powershell
-		New-B2CPolicy  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		New-B2CPolicy [-TenantId] <String> [-Policy] <String> [[-OverwriePolicy] <Boolean>] [-ForeAuthn] [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -61,7 +61,9 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;New-B2CCertificate
 
 ```powershell
-		New-B2CCertificate  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		New-B2CCertificate -TenantId <string> -CertificateId <string> -CertificateFile <string> [-Password <string>] [-ForeAuthn]  [<CommonParameters>]
+		New-B2CCertificate -TenantId <string> -CertificateId <string> -NewCertSubject <string> [-NewSelfSignedCert] [-ForeAuthn]  [<CommonParameters>]
+		New-B2CCertificate -TenantId <string> -CertificateId <string> -Certificate <X509Certificate2> [-Password <string>] [-ForeAuthn]  [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -69,7 +71,9 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;New-B2CKeyContainer
 
 ```powershell
-		New-B2CKeyContainer  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		New-B2CKeyContainer -TenantId <String> -KeyContainerId <String> -UnencodedString <String> [-OverwriteIfExists] [<CommonParameters>]
+		New-B2CKeyContainer -TenantId <String> -KeyContainerId <String> -keyId <String> -SecretType <String> -Expiration <Int64> -DeltaNotBefore <Int64> -keySize <String> [-OverwriteIfExists]
+    [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -82,7 +86,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get-B2CPolicy
 
 ```powershell
-		Get-B2CPolicy  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Get-B2CPolicy [-TenantId] <string> [-PolicyId] <string> [-GetBasePolicies] [-ForeAuthn]  [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -90,7 +94,8 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get-B2CCertificate
 
 ```powershell
-		Get-B2CCertificate  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Get-B2CCertificate -TenantId <String> -CertificateId <String> [-ForeAuthn] [<CommonParameters>]
+		Get-B2CCertificate -TenantId <String> -AllCerts [-ForeAuthn] [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -98,7 +103,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get-B2CKeyContainer
 
 ```powershell
-		Get-B2CKeyContainer  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Get-B2CKeyContainer [-TenantId] <String> [-KeyContainerId] <String> [-ForeAuthn] [<CommonParameters>]
         Example:
         		
 		PS>         
@@ -111,7 +116,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Remove-B2CPolicy
 
 ```powershell
-		Remove-B2CPolicy  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Remove-B2CPolicy [-TenantId] <String> [-PolicyId] <String> [-ForeAuthn] [<CommonParameters>]
         Example:
         		
 		PS> 
@@ -120,7 +125,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Remove-B2CCertificate
 
 ```powershell
-		Remove-B2CCertificate  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Remove-B2CCertificate [-TenantId] <String> [-CertificateId] <String> [-ForeAuthn] [<CommonParameters>]
         Example:
 		
 		PS> 
@@ -128,7 +133,7 @@ PS> Import-Module -Force B2CUtils.psm1
 ### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Remove-B2CKeyContainer
 
 ```powershell 
-		Remove-B2CKeyContainer  [-TenantId] <string> [-ForeAuthn]  [<CommonParameters>]
+		Remove-B2CKeyContainer [-TenantId] <String> [-KeyContainerId] <String> [-ForeAuthn] [<CommonParameters>]
 		Example:
 		
 		PS> 
