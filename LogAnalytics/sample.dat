@@ -1,0 +1,133 @@
+[
+  {
+    "Kind": "Headers",
+    "Content": {
+      "UserJourneyRecorderEndpoint": "https://b2cfunctions.azurewebsites.net/api/LogToOMS?code=1234567899Demplaf9tdzbFuokaQHksXESPiZSJTJuSzIVCZGmUxA==",
+      "CorrelationId": "3e66e3f5-e6ae-44fd-a077-d0f77a50d681",
+      "EventInstance": "Event:AUTH",
+      "TenantId": "myb2ctenant.onmicrosoft.com",
+      "PolicyId": "B2C_1A_SAML_SignIn"
+    }
+  },
+  {
+    "Kind": "Transition",
+    "Content": {
+      "EventName": "AUTH",
+      "StateName": "Initial"
+    }
+  },
+  {
+    "Kind": "Predicate",
+    "Content": "Web.TPEngine.StateMachineHandlers.NoOpHandler"
+  },
+  {
+    "Kind": "HandlerResult",
+    "Content": {
+      "Result": true,
+      "Statebag": {
+        "MACHSTATE": {
+          "c": "2017-01-13T04:18:58.3202965Z",
+          "k": "MACHSTATE",
+          "v": "Initial",
+          "p": true
+        },
+        "JC": {
+          "c": "2017-01-13T04:18:58.3202965Z",
+          "k": "JC",
+          "v": "en-GB",
+          "p": true
+        },
+        "ComplexItems": "_MachineEventQ, TCTX"
+      },
+      "PredicateResult": "True"
+    }
+  },
+  {
+    "Kind": "Action",
+    "Content": "Web.TPEngine.OrchestrationManager"
+  },
+  {
+    "Kind": "HandlerResult",
+    "Content": {
+      "Result": true,
+      "Statebag": {
+        "ORCH_CS": {
+          "c": "2017-01-13T04:18:58.3541789Z",
+          "k": "ORCH_CS",
+          "v": "0",
+          "p": true
+        }
+      }
+    }
+  },
+  {
+    "Kind": "Transition",
+    "Content": {
+      "EventName": "PreStep",
+      "StateName": "Initial"
+    }
+  },
+  {
+    "Kind": "Predicate",
+    "Content": "Web.TPEngine.StateMachineHandlers.NoOpHandler"
+  },
+  {
+    "Kind": "HandlerResult",
+    "Content": {
+      "Result": true,
+      "PredicateResult": "True"
+    }
+  },
+  {
+    "Kind": "Action",
+    "Content": "Web.TPEngine.StateMachineHandlers.PreSetupHandler"
+  },
+  {
+    "Kind": "HandlerResult",
+    "Content": {
+      "Result": true,
+      "Statebag": {
+        "RPP": {
+          "c": "2017-01-13T04:18:58.3541789Z",
+          "k": "RPP",
+          "v": "SAMLP",
+          "p": true
+        },
+        "RPIPP": {
+          "c": "2017-01-13T04:18:58.3541789Z",
+          "k": "RPIPP",
+          "v": "SamlProtocolProvider",
+          "p": true
+        },
+        "OTID": {
+          "c": "2017-01-13T04:18:58.3541789Z",
+          "k": "OTID",
+          "v": "myb2ctenant.onmicrosoft.com",
+          "p": true
+        }
+      }
+    }
+  },
+  {
+    "Kind": "Predicate",
+    "Content": "Web.TPEngine.StateMachineHandlers.InitiatingMessageValidationHandler"
+  },
+  {
+    "Kind": "FatalException",
+    "Content": {
+      "Time": "4:18 AM",
+      "Exception": {
+        "Kind": "Handled",
+        "HResult": "80131509",
+        "Message": "There is an error in XML document (1, 168).",
+        "Data": {},
+        "Exception": {
+          "Kind": "Handled",
+          "HResult": "80131537",
+          "Message": "The string 'False' is not a valid Boolean value.",
+          "Data": {}
+        }
+      }
+    }
+  }
+]
