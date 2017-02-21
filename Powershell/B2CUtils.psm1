@@ -877,6 +877,77 @@ function New-B2CCertificate {
 	
 }
 
+Add-Type -TypeDefinition @"
+   public enum B2CAttributeType
+   {
+      String=1,
+      Boolean=2,
+      Duration=3,
+      DateTime=4,
+      Int=5,
+      Date=6,
+      StringCollection=7,
+      Long=8
+   }
+"@
+
+
+<# 
+ .Synopsis
+  Create a new V1 Base Attribute in B2C
+
+ .Description
+  This function creates a B2C Attribute visible wihtin the Portal.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter AttributeName
+  Specifies the name of the new attribute
+  
+  .Parameter AttributeType
+  Specifies the Attribute Type (The can be one of String, Boolean, Duration, DateTime, Int, Date, StringCollection, Long)
+  
+  .Parameter AttributeDescription
+  Specifies an optional description to add to the attribute.
+    
+ .Parameter ForeAuthn
+  Forces you to re-authenticate.
+  
+ .Example
+   # New Attribute
+   New-B2CBaseAttribute -TenantId "myb2ctenant.onmicrosoft.com"  -AttributeName "NewSTR" -AttributeType String -AttributeDescription "TESTING"
+   
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function New-B2CBaseAttribute {
+	param(
+	[Parameter(Mandatory=$true)]
+    	[string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$AttributeName,
+	[Parameter(Mandatory=$true)]
+	[B2CAttributeType]$AttributeType,
+	[string]$AttributeDescription,
+	[switch]$ForeAuthn
+    )
+
+
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	try{
+
+		$PostStr = '{"dataType":' + [int]$AttributeType + ',"displayName":"' + $AttributeName + '","adminHelpText":"' + $AttributeDescription + '", "userHelpText":"' + $AttributeDescription + '","userInputType":1,"userAttributeOptions":[]}'
+
+		$PostStr
+		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/userAttribute?tenantId=unifyb2cworkshop.onmicrosoft.com&`$orderby=DisplayName" -Method POST -ContentType "application/json" -Headers @{Authorization="Bearer $accessToken"} -Body $PostStr
+	} 
+	Catch
+	{
+		GetB2CError
+	}
+}
 
 #TODO: New-B2CUser
 

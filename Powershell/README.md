@@ -139,6 +139,15 @@ PS> Import-Module -Force B2CUtils.psm1
 		PS> 
 ```
 
+### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;New-B2CBaseAttribute
+
+```powershell 
+		New-B2CBaseAttribute [-TenantId] <string> [-AttributeName] <string> [-AttributeType] <B2CAttributeType> {String | Boolean | Duration | DateTime | Int | Date | StringCollection | Long} [[-AttributeDescription] <string>] [-ForeAuthn]  [<CommonParameters>]
+		Example:
+		
+		PS> New-B2CBaseAttribute -AttributeName "PWTST2" -AttributeType StringCdollection -AttributeDescription "TESTING"
+```
+
 
 <br/>
 ## Other Functions
