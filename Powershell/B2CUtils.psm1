@@ -13,10 +13,8 @@ function Get-TenantAccessToken
 {
 param(
     $TenantId,
-	[bool]$ForeAuthn
+	[bool]$ForceAuthn
     )
-
-
 	$adal = "$PSScriptRoot\Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
 	if (!(Test-Path $adal)) { Throw "Could not find $adal. Please make sure you run this obtain the full ExploreAdmin folder and run the script from there."; return;}
 	[System.Reflection.Assembly]::LoadFile($adal) > $null
@@ -25,14 +23,15 @@ param(
 	if (!(Test-Path $adal)) { Throw "Could not find $adal. Please make sure you run this obtain the full ExploreAdmin folder and run the script from there."; return;}
 	[System.Reflection.Assembly]::LoadFile($adalWin) > $null
 
-
 	$authority = "https://login.microsoftonline.com/$TenantId";
+	
+	$resource = "https://cpimadmin.onmicrosoft.com" 
 
-	$resource = "https://cpimadmin.onmicrosoft.com"
-	$clientId = "974c6c0f-4a8f-415d-a767-da2ddb587fc9"
+	$clientId = "974c6c0f-4a8f-415d-a767-da2ddb587fc9" 
 
-	$redirectUri = "https://cpim"
-		if($ForeAuthn)
+	$redirectUri = "https://cpim" #Correct
+	
+		if($ForceAuthn)
 		{
 			$promptBehavoir = [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always;
 		}
@@ -48,7 +47,6 @@ param(
 	$token = $context.AcquireToken($resource, $clientId, $redirectUri, $promptBehavoir,$useridentifier,"amr_values=mfa" );
 
 	$token.AccessToken;
-
 }
 
 function GetB2CError()
@@ -108,7 +106,7 @@ param(
  .Parameter TenantId
   The name of the B2C Tenant.
 
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -118,7 +116,7 @@ param(
 
  .Example
     #  Get a list of Certificates, after you re-authenticate..
-   Get-B2CCertificateList -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn
+   Get-B2CCertificateList -TenantId "myb2ctenant.onmicrosoft.com" -ForceAuthn
 
  .LINK
 	https://github.com/WhippsP/B2CUtils
@@ -130,11 +128,11 @@ param(
     [string]$TenantId,
 	[parameter(DontShow)]
 	[string]$KeyType="cert",
-	[switch]$ForeAuthn,
+	[switch]$ForceAuthn,
 	[switch]$raw
     )
 
-$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 
 try{
 $KeyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keylist?api-version=1&TenantId=$TenantId&KeyType=$KeyType" -Method Get -Headers @{Authorization="Bearer $accessToken"}
@@ -163,7 +161,7 @@ else{
  .Parameter TenantId
   The name of the B2C Tenant.
 
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -173,7 +171,7 @@ else{
 
  .Example
     #  Get a list of Key Containers., after you re-authenticate..
-   Get-B2CKeyContainerList -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn
+   Get-B2CKeyContainerList -TenantId "myb2ctenant.onmicrosoft.com" -ForceAuthn
 
  .LINK
 	https://github.com/WhippsP/B2CUtils
@@ -183,11 +181,11 @@ function Get-B2CKeyContainerList {
 param(
    [Parameter(Mandatory=$true)]
     [string]$TenantId,
-	[switch]$ForeAuthn,
+	[switch]$ForceAuthn,
 	[switch]$raw
     )
 
-	Get-B2CCertificateList -TenantId $TenantId -ForeAuthn:$ForeAuthn -raw:$raw -KeyType KeyContainer
+	Get-B2CCertificateList -TenantId $TenantId -ForceAuthn:$ForceAuthn -raw:$raw -KeyType KeyContainer
    
 }
 
@@ -202,7 +200,7 @@ param(
  .Parameter TenantId
   The name of the B2C Tenant.
 
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -212,7 +210,7 @@ param(
 
  .Example
     #  Get a list of Policies, after you re-authenticate..
-   Get-B2CPolicyList -TenantId "myb2ctenant.onmicrosoft.com" -ForeAuthn
+   Get-B2CPolicyList -TenantId "myb2ctenant.onmicrosoft.com" -ForceAuthn
 
  .LINK
 	https://github.com/WhippsP/B2CUtils
@@ -222,10 +220,10 @@ function Get-B2CPolicyList {
 param(
    [Parameter(Mandatory=$true)]
     [string]$TenantId,
-	[switch]$ForeAuthn
+    [switch]$ForceAuthn
     )
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 	try {
 		$PolicyList = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/policyList?tenantId=$TenantId" -Method Get -Headers @{Authorization="Bearer $accessToken"}
 	}
@@ -238,6 +236,55 @@ param(
 
 
 }
+
+
+<# 
+ .Synopsis
+  Gets a B2C Application List.
+
+ .Description
+  Retrieves a list of B2C Applications.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+ .Parameter ForceAuthn
+  Forces you to re-authenticate.
+  
+ .Example
+   # Get a list of B2C Applications.
+   Get-B2CApplicationList -TenantId "myb2ctenant.onmicrosoft.com"
+
+ .Example
+    #  Get a list of B2C Applications, after you re-authenticate..
+   Get-B2CApplicationList -TenantId "myb2ctenant.onmicrosoft.com" -ForceAuthn
+
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+
+function Get-B2CApplicationList {
+	param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[switch]$ForceAuthn
+    )
+		
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
+
+	Try{
+	
+		$B2CApps = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/ApplicationV2/GetAllV2Applications?tenantId=$TenantId" -Method Get -Headers @{Authorization="Bearer $accessToken"}
+	}
+	Catch
+	{
+		GetB2CError
+	}
+	([xml]$B2CApps.content).ArrayOfApplication.Application
+}
+
+
 
 #TODO: Get-B2CUserList
 
@@ -260,7 +307,7 @@ param(
   .Parameter GetBasePolicies
   Retrive all associated Polciies within the Policy Chain.
 
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -274,7 +321,7 @@ param(
    
    .Example
     #  Get a Policy, after you re-authenticate..
-   Get-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1 -ForeAuthn 
+   Get-B2CPolicy -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1 -ForceAuthn 
 
  .LINK
 	https://github.com/WhippsP/B2CUtils
@@ -287,16 +334,56 @@ param(
 	[Parameter(Mandatory=$true)]
 	[string]$PolicyId,
 	[switch]$GetBasePolicies,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 
 	$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework/GetAsXml?api-version=1&TenantId=$TenantId&PolicyId=$PolicyId&SendAsAttachment=false&GetBasePolicies=$GetBasePolicies" -Method Get -Headers @{Authorization="Bearer $accessToken"}
 
 	
 	([xml]$pol.content)
 }
+
+
+<# 
+ .Synopsis
+  Gets a B2C Policies MD5 Hash.
+
+ .Description
+  Retrives a Trust Framework Policy from B2C.
+
+ .Parameter TenantId
+  The name of the B2C Tenant.
+  
+  .Parameter PolicyId
+  Specify the name of the Policy to return.
+
+
+ .Example
+   # Get a Policy from B2C.
+   Get-B2CPolicyMD5 -TenantId "myb2ctenant.onmicrosoft.com" -PolicyId B2C_1A_Policy1
+   
+ .LINK
+	https://github.com/WhippsP/B2CUtils
+   
+#>
+function Get-B2CPolicyMD5 {
+param(
+	[Parameter(Mandatory=$true)]
+    	[string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$PolicyId
+    )
+
+	$Policy = Get-B2CPolicy -TenantID $TenantId -PolicyID $PolicyId 
+	
+	$md5 = new-object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+	$utf8 = new-object -TypeName System.Text.UTF8Encoding
+	$hash = [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($Policy.OuterXML)))
+	$hash
+}
+
 
 <# 
  .Synopsis
@@ -314,7 +401,7 @@ param(
   .Parameter AllCerts
   Retrieve all associated Certificates within B2C. (Can not be used with CertificateId)
 
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
  .Example
@@ -342,11 +429,11 @@ function Get-B2CCertificate {
 	[string]$CertificateId,
 	[parameter(Mandatory=$true,ParameterSetName = "AllCerts")]
 	[switch]$AllCerts,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 	
 	
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 
 	$CrtArray = @()
 	
@@ -399,7 +486,7 @@ function Get-B2CCertificate {
   .Parameter KeyContainerId
   Specify the name of the Key Container to return. (Can not be used with AllCerts)
    
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
  .Example
@@ -420,11 +507,11 @@ function Get-B2CKeyContainer {
     [string]$TenantId,
 	[Parameter(Mandatory=$true)]
 	[string]$KeyContainerId,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 	
 	
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 
 	Try{
 		$KeyContainer = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keycontainer?api-version=1&TenantId=$TenantId&StorageReferenceId=$KeyContainerId" -Method Get -Headers @{Authorization="Bearer $accessToken"}
@@ -459,7 +546,7 @@ function Get-B2CKeyContainer {
   .Parameter OverwriePolicy
   Overwrites the Policy - Default is $True.
 
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -478,24 +565,30 @@ function Get-B2CKeyContainer {
    
 #>
 function New-B2CPolicy {
-param(
-	[Parameter(Mandatory=$true)]
-    [string]$TenantId,
-	[Parameter(Mandatory=$true)]
+	[CmdletBinding(DefaultParameterSetName="PolicyFile")] 
+	param(
+   	[string]$TenantId,
+	[parameter(Mandatory=$true,ParameterSetName = "PolicyFile")]
+	[string]$PolicyFile,
+	[parameter(Mandatory=$true,ParameterSetName = "Policy")]
 	[string]$Policy,
 	[bool]$OverwriePolicy=$true,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 	Add-Type -AssemblyName System.Web
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 	
 	# Policy Must be HTML Encoded within a String Element
+	if($PolicyFile)
+	{
+		$Policy = (get-content -raw $PolicyFile)
+	}
 	
     $PostStr = '<string xmlns="http://schemas.microsoft.com/2003/10/Serialization/">' + [System.Web.HttpUtility]::HtmlEncode($Policy) + '</string>'
 	
 	
 	try{
-		$webAppResponse = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/trustframework?tenantId=$TenantId&OverwriteIfExists=$OverwriePolicy" -Method Post -Headers @{Authorization="Bearer $accessToken"} -ContentType "application/xml" -Body $PostStr
+		$webAppResponse = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/trustframework?tenantId=$TenantId&overwriteIfExists=$OverwriePolicy" -Method Post -Headers @{Authorization="Bearer $accessToken";"Origin"="https://main.b2cadmin.ext.azure.com"} -ContentType "application/xml" -Body $PostStr
 	}
 	Catch
 	{
@@ -503,6 +596,94 @@ param(
 	}
 
 }
+
+function New-B2CApplication {
+param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$ApplicationName,
+	[Parameter(Mandatory=$true)]
+	[string]$ReplyUrl,
+	[switch]$ForceAuthn
+    )
+	Add-Type -AssemblyName System.Web
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
+	
+	# Policy Must be HTML Encoded within a String Element
+	$PostStr = ('<Application xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Cpim.Client.DataModels"><ApplicationId></ApplicationId><ApplicationName>{0}</ApplicationName><ApplicationVersion>V2</ApplicationVersion><EnableNativeClient>false</EnableNativeClient><Id></Id><IdentifierUris xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" /><OAuth2Permissions /><ReplyUrls xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays"><d3p1:string>{1}</d3p1:string></ReplyUrls><WebClientAllowImplicitFlow>true</WebClientAllowImplicitFlow><WebClientAppKeys><hint>InitialSecret</hint></WebClientAppKeys></Application>' -f @($ApplicationName,$ReplyUrl))
+
+	try{
+		$webAppResponse = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/ApplicationV2/PostNewApplication?tenantId=$TenantId" -Method Post -Headers @{Authorization="Bearer $accessToken";"Origin"="https://main.b2cadmin.ext.azure.com"} -ContentType "application/xml" -Body $PostStr
+		$webAppResponse
+	}
+	Catch
+	{
+		GetB2CError
+	}
+
+}
+#GET https://main.b2cadmin.ext.azure.com/api/ApplicationV2/GetApplication?tenantId=unifyb2cworkshop.onmicrosoft.com&applicationId=aa1a63fa-be67-4294-84d8-8b049f3aa54d
+
+function Get-B2CApplication {
+param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$ApplicationId,
+	[switch]$ForceAuthn
+    )
+	Add-Type -AssemblyName System.Web
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
+	
+	try{
+		$B2CApp = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/ApplicationV2/GetApplication?tenantId=$TenantId&applicationId=$ApplicationId" -Method Get -Headers @{Authorization="Bearer $accessToken"} -ContentType "application/xml"
+	}
+	Catch
+	{
+		GetB2CError
+	}
+	([xml]$B2CApp.content)
+}
+
+#PATCH https://main.b2cadmin.ext.azure.com/api/ApplicationV2/PatchApplication?tenantId=unifyb2cdemo.onmicrosoft.com&id=57d6e7fe-84d0-4715-8921-c7ff0a8284f6 
+function New-B2CApplicationSecret {
+param(
+	[Parameter(Mandatory=$true)]
+    [string]$TenantId,
+	[Parameter(Mandatory=$true)]
+	[string]$ApplicationId,
+	[switch]$ForceAuthn
+    )
+	
+	Add-Type -AssemblyName System.Web
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
+	$CurApp = Get-B2CApplication -TenantId $TenantId -ApplicationId $ApplicationId
+	$ID = $CurApp.Application.Id
+	$hint = $CurApp.CreateElement("Hint")
+	$hint.InnerText = "TEST"
+	$ApplicationCredential = $CurApp.CreateElement("ApplicationCredential")
+	$rtn = $ApplicationCredential.AppendChild($hint)
+	
+	$rtn = $CurApp.Application["WebClientAppKeys"].AppendChild($ApplicationCredential)
+	#$CurApp.Application.WebClientAppKeys["ApplicationCredential"].AppendChild($hint)
+	#$CurApp.Application.ApplicationVersion="1"
+	#$CurApp.OuterXML
+	#$accessToken
+	# Policy Must be HTML Encoded within a String Element
+	$PostStr = $CurApp.OuterXML.Replace(" xmlns=`"`"","")
+#$PostStr
+	try{
+		$webAppResponse = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/ApplicationV2/PatchApplication?tenantId=$TenantId&id=$ID" -Method PATCH -Headers @{Authorization="Bearer $accessToken";"Content-Type"="application/xml"} -ContentType "application/xml" -Body $PostStr
+		#$webAppResponse.Content
+	}
+	Catch
+	{
+		GetB2CError
+	}
+	([xml]$webAppResponse.Content).Application.WebClientAppKeys.ApplicationCredential.Hint | where {$_.SubString(11) -ne "*****"}
+}
+
 
 <# 
  .Synopsis
@@ -533,7 +714,7 @@ param(
   .Parameter OverwriteIfExists
   If the Key Container exists setting this switch will overwrite it.
   
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
  .Example
@@ -561,7 +742,7 @@ function New-B2CKeyContainer {
 	param(
 	[parameter(Mandatory=$true,ParameterSetName = "StringKey")]
 	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
-    [string]$TenantId,
+    	[string]$TenantId,
 	[parameter(Mandatory=$true,ParameterSetName = "StringKey")]
 	[parameter(Mandatory=$true,ParameterSetName = "KeyContainer")]	
 	[string]$KeyContainerId,
@@ -583,7 +764,7 @@ function New-B2CKeyContainer {
 	[switch] $OverwriteIfExists
     )
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $False
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $False
 	
 	
 	switch ($PsCmdlet.ParameterSetName) {
@@ -639,7 +820,7 @@ function New-B2CKeyContainer {
   .Parameter PolicyId
   Specify the name of the Policy to remove.
   
-  .Parameter ForeAuthn
+  .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -657,10 +838,10 @@ param(
     [string]$TenantId,
 	[Parameter(Mandatory=$true)]
 	[string]$PolicyId,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 	try{
 		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/TrustFramework/?api-version=1&TenantId=$TenantId&PolicyId=$PolicyId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
 	} 
@@ -685,7 +866,7 @@ param(
   .Parameter CertificateId
   Specify the name of the Certificate to remove.
   
-  .Parameter ForeAuthn
+  .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -703,11 +884,11 @@ param(
     [string]$TenantId,
 	[Parameter(Mandatory=$true)]
 	[string]$CertificateId,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 	try{
 		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/certificate/?api-version=1&TenantId=$TenantId&CertificateId=$CertificateId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
 	} 
@@ -730,7 +911,7 @@ param(
   .Parameter KeyContainerId
   Specify the name of the Key COntainer to remove.
   
-  .Parameter ForeAuthn
+  .Parameter ForceAuthn
   Forces you to re-authenticate.
   
 
@@ -748,11 +929,11 @@ function Remove-B2CKeyContainer {
     [string]$TenantId,
 	[Parameter(Mandatory=$true)]
 	[string]$KeyContainerId,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 	try{
 		$pol = Invoke-WebRequest "https://main.b2cadmin.ext.azure.com/api/keycontainer?api-version=1&TenantId=$TenantId&StorageReferenceId=$KeyContainerId" -Method Delete -Headers @{Authorization="Bearer $accessToken"}
 	} 
@@ -791,7 +972,7 @@ function Remove-B2CKeyContainer {
   .Parameter NewCertSubject
   Specifies subject if using the NewSelfSignedCert switch.
   
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
  .Example
@@ -833,7 +1014,7 @@ function New-B2CCertificate {
 	[string]$NewCertSubject,
 	[parameter(Mandatory=$false,ParameterSetName = "AddSelfCert")]
 	[switch]$NewSelfSignedCert,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
 	)
 	
 	if(($NewCertSubject.Length -gt 0) -and ( !$NewSelfSignedCert)) 
@@ -848,7 +1029,7 @@ function New-B2CCertificate {
 		break;
 	}
 	
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $False
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $False
 	
 	if($NewSelfSignedCert)
 	{
@@ -911,7 +1092,7 @@ Add-Type -TypeDefinition @"
   .Parameter AttributeDescription
   Specifies an optional description to add to the attribute.
     
- .Parameter ForeAuthn
+ .Parameter ForceAuthn
   Forces you to re-authenticate.
   
  .Example
@@ -931,11 +1112,11 @@ function New-B2CBaseAttribute {
 	[Parameter(Mandatory=$true)]
 	[B2CAttributeType]$AttributeType,
 	[string]$AttributeDescription,
-	[switch]$ForeAuthn
+	[switch]$ForceAuthn
     )
 
 
-	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForeAuthn $ForeAuthn
+	$accessToken = Get-TenantAccessToken -TenantId $TenantId -ForceAuthn $ForceAuthn
 	try{
 
 		$PostStr = '{"dataType":' + [int]$AttributeType + ',"displayName":"' + $AttributeName + '","adminHelpText":"' + $AttributeDescription + '", "userHelpText":"' + $AttributeDescription + '","userInputType":1,"userAttributeOptions":[]}'
